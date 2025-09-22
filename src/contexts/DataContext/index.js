@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useMemo,
 } from "react";
 
 const DataContext = createContext({});
@@ -19,17 +20,31 @@ export const api = {
 export const DataProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  
   const getData = useCallback(async () => {
     try {
-      setData(await api.loadData());
+      setData(await Promise.resolve(api.loadData()));
     } catch (err) {
       setError(err);
     }
   }, []);
+  
   useEffect(() => {
     if (data) return;
     getData();
   });
+  
+  // Ajout de la logique pour récupérer le dernier événement
+  const last = useMemo(() => {
+    if (!data?.events) return null;
+    
+    // Trier les événements par date décroissante et prendre le premier
+    const sortedEvents = [...data.events].sort((a, b) => 
+      new Date(b.date) - new Date(a.date)
+    );
+    
+    return sortedEvents[0];
+  }, [data]);
   
   return (
     <DataContext.Provider
@@ -37,6 +52,7 @@ export const DataProvider = ({ children }) => {
       value={{
         data,
         error,
+        last,
       }}
     >
       {children}
